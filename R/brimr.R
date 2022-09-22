@@ -44,7 +44,7 @@ brimr_download_table_3 <-
 #' @examples
 #' brimr_get_fig_data(2021, "PEDIATRICS")
 brimr_get_fig_data <- function(year, dept) {
-  awards_ranked_by_department <- josp::brimr_table_3 %>%
+  awards_ranked_by_department <- brimr_table_3 %>%
     dplyr::filter(.data[["year"]] == .env[["year"]]) %>%
     dplyr::group_by(
       .data[["organization_name"]],
@@ -284,10 +284,10 @@ brimr_make_slide <-
 #' @examples
 #' brimr_ranking_table_row(2021, "PEDIATRICS")
 brimr_ranking_table_row <- function(year, nih_combining_name) {
-  year_1 <- josp::brimr_get_fig_data(year, nih_combining_name)
-  year_0 <- josp::brimr_get_fig_data(year - 1, nih_combining_name)
+  year_1 <- brimr_get_fig_data(year, nih_combining_name)
+  year_0 <- brimr_get_fig_data(year - 1, nih_combining_name)
 
-  wusm_dept <- josp::brimr_wusm_dept_mappings %>%
+  wusm_dept <- brimr_wusm_dept_mappings %>%
     dplyr::filter(
       .data[["nih_combining_name"]] == .env[["nih_combining_name"]]
     ) %>%
@@ -327,8 +327,8 @@ brimr_ranking_table <- function(year) {
   purrr::pmap_dfr(
     tibble::tibble(
       year = year,
-      nih_combining_name = josp::brimr_wusm_dept_mappings$nih_combining_name
+      nih_combining_name = brimr_wusm_dept_mappings$nih_combining_name
     ),
-    josp:::brimr_ranking_table_row
+    brimr_ranking_table_row
   )
 }
