@@ -65,6 +65,9 @@ brimr_get_fig_data <- function(year, dept) {
       "WASHINGTON UNIVERSITY ST LOUIS"
     ))
 
+  top_award_info <- awards_ranked_by_department %>%
+    dplyr::slice(1)
+
   dplyr::tibble(
     year = .env[["year"]],
     fisc_year = sub("^\\d{2}", "FY", .env[["year"]]),
@@ -75,7 +78,9 @@ brimr_get_fig_data <- function(year, dept) {
     nih_total = sum(awards_ranked_by_department$total_award, na.rm = TRUE),
     nih_mean = mean(awards_ranked_by_department$total_award, na.rm = TRUE),
     non_wusm_award = .data[["nih_total"]] - .data[["wusm_award"]],
-    wusm_pct = .data[["wusm_award"]] / .data[["nih_total"]]
+    wusm_pct = .data[["wusm_award"]] / .data[["nih_total"]],
+    top_name = top_award_info$organization_name,
+    top_award = top_award_info$total_award
   )
 }
 
@@ -268,3 +273,62 @@ brimr_make_slide <-
 
     print(pptx, target = target)
   }
+
+#' BRIMR Ranking Table Row
+#'
+#' @param year desired year
+#' @param nih_combining_name the NIH combining name of the department
+#'
+#' @return a tibble containing data for one row in a ranking table
+#'
+#' @examples
+#' brimr_ranking_table_row(2021, "PEDIATRICS")
+brimr_ranking_table_row <- function(year, nih_combining_name) {
+  year_1 <- josp::brimr_get_fig_data(year, nih_combining_name)
+  year_0 <- josp::brimr_get_fig_data(year - 1, nih_combining_name)
+
+  wusm_dept <- josp::brimr_wusm_dept_mappings %>%
+    dplyr::filter(
+      .data[["nih_combining_name"]] == .env[["nih_combining_name"]]
+    ) %>%
+    dplyr::pull(.data[["wusm_dept"]])
+
+  tibble::tibble(
+    wusm_dept = wusm_dept,
+    nih_combining_name = nih_combining_name,
+    wusm_rank_status = dplyr::case_when(
+      year_0$wusm_rank < year_1$wusm_rank ~ "up",
+      year_0$wusm_rank == year_1$wusm_rank ~ "equal",
+      year_0$wusm_rank > year_1$wusm_rank ~ "down",
+      TRUE ~ NA_character_
+    ),
+    wusm_rank_1 = year_1$wusm_rank,
+    wusm_rank_0 = year_0$wusm_rank,
+    wusm_award_1 = year_1$wusm_award,
+    wusm_award_0 = year_0$wusm_award,
+    top_name_1 = year_1$top_name,
+    top_award_1 = year_1$top_award,
+    top_name_0 = year_0$top_name,
+    top_award_0 = year_0$top_award
+  )
+}
+
+#' BRIMR Ranking Table
+#'
+#' @param year desired year
+#'
+#' @return a tibble containing data that compares WUSM departments ranks and
+#' funding vs the top funded department for the provided and previous year.
+#' @export
+#'
+#' @examples
+#' brimr_ranking_table(2021)
+brimr_ranking_table <- function(year) {
+  purrr::pmap_dfr(
+    tibble::tibble(
+      year = year,
+      nih_combining_name = josp::brimr_wusm_dept_mappings$nih_combining_name
+    ),
+    brimr_ranking_table_row
+  )
+}

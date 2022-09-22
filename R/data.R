@@ -10,6 +10,6 @@
 #'
 #' A map from WUSM departments to the NIH combining names.
 #'
-#' @format A tibble with two columns `wusm_josp_depts` which are mapped to
+#' @format A tibble with two columns `wusm_dept` which are mapped to
 #' `nih_combining_name`.
 "brimr_wusm_dept_mappings"

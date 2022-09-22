@@ -5,7 +5,7 @@
 \alias{brimr_wusm_dept_mappings}
 \title{BRIMR WUSM Department Mappings}
 \format{
-A tibble with two columns \code{wusm_josp_depts} which are mapped to
+A tibble with two columns \code{wusm_dept} which are mapped to
 \code{nih_combining_name}.
 }
 \usage{
