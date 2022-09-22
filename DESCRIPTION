@@ -26,7 +26,6 @@ Imports:
     flextable,
     ggplot2,
     httr,
-    janitor,
     officer,
     purrr,
     rlang,

@@ -18,5 +18,5 @@ a tibble containing data for one row in a ranking table
 BRIMR Ranking Table Row
 }
 \examples{
-brimr_ranking_table_row(2021, "PEDIATRICS")
+josp:::brimr_ranking_table_row(2021, "PEDIATRICS")
 }
