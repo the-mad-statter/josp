@@ -22,8 +22,14 @@ Depends:
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.1
 Imports: 
+    flextable,
+    ggplot2,
     httr,
     janitor,
+    officer,
+    purrr,
+    rlang,
+    scales,
     tibble
 Suggests: 
     testthat (>= 3.0.0)
