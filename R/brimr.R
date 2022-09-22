@@ -44,14 +44,8 @@ brimr_download_table_3 <-
 #' @examples
 #' brimr_get_fig_data(2021, "PEDIATRICS")
 brimr_get_fig_data <- function(year, dept) {
-  y <- year
-
-  raw <- josp::brimr_table_3 %>%
-    dplyr::filter(year == y)
-
-  awards_ranked_by_department <- raw %>%
-    janitor::clean_names() %>%
-    dplyr::filter(!is.na(.data[["pi_name"]])) %>%
+  awards_ranked_by_department <- josp::brimr_table_3 %>%
+    dplyr::filter(.data[["year"]] == .env[["year"]]) %>%
     dplyr::group_by(
       .data[["organization_name"]],
       .data[["nih_dept_combining_name"]]
@@ -61,7 +55,7 @@ brimr_get_fig_data <- function(year, dept) {
       n_grants = dplyr::n(),
       .groups = "drop"
     ) %>%
-    dplyr::filter(.data[["nih_dept_combining_name"]] == dept) %>%
+    dplyr::filter(.data[["nih_dept_combining_name"]] == .env[["dept"]]) %>%
     dplyr::arrange(dplyr::desc(.data[["total_award"]])) %>%
     tibble::rowid_to_column("rank")
 
@@ -72,9 +66,9 @@ brimr_get_fig_data <- function(year, dept) {
     ))
 
   dplyr::tibble(
-    year = y,
-    fisc_year = sub("^\\d{2}", "FY", y),
-    dept = dept,
+    year = .env[["year"]],
+    fisc_year = sub("^\\d{2}", "FY", .env[["year"]]),
+    dept = .env[["dept"]],
     wusm_n_grants = wusm_award_info$n_grants,
     wusm_rank = wusm_award_info$rank,
     wusm_award = wusm_award_info$total_award,
@@ -116,12 +110,12 @@ brimr_make_slide <-
 
     df <- d %>%
       dplyr::select(
-        year,
+        .data[["year"]],
         .data[["wusm_rank"]],
         .data[["wusm_n_grants"]],
         .data[["wusm_pct"]]
       ) %>%
-      dplyr::arrange(year) %>%
+      dplyr::arrange(.data[["year"]]) %>%
       dplyr::mutate(wusm_pct = scales::percent_format(0.1)(.data[["wusm_pct"]]))
 
     ft <- dplyr::as_tibble(
@@ -163,8 +157,14 @@ brimr_make_slide <-
         )
       ) +
       ggplot2::geom_col(color = "black", size = 1.5) +
-      ggplot2::geom_point(ggplot2::aes(year, .data[["gg_wusm_pct"]]), size = 3) +
-      ggplot2::geom_line(ggplot2::aes(year, .data[["gg_wusm_pct"]]), size = 1.5) +
+      ggplot2::geom_point(
+        ggplot2::aes(year, .data[["gg_wusm_pct"]]),
+        size = 3
+      ) +
+      ggplot2::geom_line(
+        ggplot2::aes(year, .data[["gg_wusm_pct"]]),
+        size = 1.5
+      ) +
       ggplot2::geom_text(nudge_y = 2000) +
       ggplot2::scale_x_continuous(
         name = ggplot2::element_blank(),
