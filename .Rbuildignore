@@ -1,4 +1,8 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^data-raw$
 ^LICENSE\.md$
+^README\.Rmd$
+^data-raw$
+^\.github$
+^codecov\.yml$
+^CODE_OF_CONDUCT\.md$

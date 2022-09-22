@@ -10,10 +10,11 @@ Authors@R:
            comment = c(ORCID = "0000-0001-5755-1725"))
 Description: This package provides helpful functions for the Washington 
     University in Saint Louis School of Medicine Joint Office of Strategic 
-    Planning
+    Planning.
 License: GPL (>= 3)
 Encoding: UTF-8
 LazyData: true
+LazyDataCompression: gzip
 URL: https://github.com/the-mad-statter/josp
 BugReports: https://github.com/the-mad-statter/josp/issues
 Depends:
