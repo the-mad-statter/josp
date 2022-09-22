@@ -51,22 +51,22 @@ brimr_get_fig_data <- function(year, dept) {
 
   awards_ranked_by_department <- raw %>%
     janitor::clean_names() %>%
-    dplyr::filter(!is.na(.data["pi_name"])) %>%
+    dplyr::filter(!is.na(.data[["pi_name"]])) %>%
     dplyr::group_by(
-      .data["organization_name"],
-      .data["nih_dept_combining_name"]
+      .data[["organization_name"]],
+      .data[["nih_dept_combining_name"]]
     ) %>%
     dplyr::summarize(
-      total_award = sum(.data["funding"]),
+      total_award = sum(.data[["funding"]]),
       n_grants = dplyr::n(),
       .groups = "drop"
     ) %>%
-    dplyr::filter(.data["nih_dept_combining_name"] == dept) %>%
-    dplyr::arrange(dplyr::desc(.data["total_award"])) %>%
+    dplyr::filter(.data[["nih_dept_combining_name"]] == dept) %>%
+    dplyr::arrange(dplyr::desc(.data[["total_award"]])) %>%
     tibble::rowid_to_column("rank")
 
   wusm_award_info <- awards_ranked_by_department %>%
-    dplyr::filter(.data["organization_name"] %in% c(
+    dplyr::filter(.data[["organization_name"]] %in% c(
       "WASHINGTON UNIVERSITY",
       "WASHINGTON UNIVERSITY ST LOUIS"
     ))
@@ -80,8 +80,8 @@ brimr_get_fig_data <- function(year, dept) {
     wusm_award = wusm_award_info$total_award,
     nih_total = sum(awards_ranked_by_department$total_award, na.rm = TRUE),
     nih_mean = mean(awards_ranked_by_department$total_award, na.rm = TRUE),
-    non_wusm_award = .data["nih_total"] - .data["wusm_award"],
-    wusm_pct = .data["wusm_award"] / .data["nih_total"]
+    non_wusm_award = .data[["nih_total"]] - .data[["wusm_award"]],
+    wusm_pct = .data[["wusm_award"]] / .data[["nih_total"]]
   )
 }
 
@@ -117,25 +117,25 @@ brimr_make_slide <-
     df <- d %>%
       dplyr::select(
         year,
-        .data["wusm_rank"],
-        .data["wusm_n_grants"],
-        .data["wusm_pct"]
+        .data[["wusm_rank"]],
+        .data[["wusm_n_grants"]],
+        .data[["wusm_pct"]]
       ) %>%
       dplyr::arrange(year) %>%
-      dplyr::mutate(wusm_pct = scales::percent_format(0.1)(.data["wusm_pct"]))
+      dplyr::mutate(wusm_pct = scales::percent_format(0.1)(.data[["wusm_pct"]]))
 
     ft <- dplyr::as_tibble(
       cbind(nms = names(df), t(df)),
       .name_repair = ~ c("nms", rev(d$fisc_year))
     ) %>%
       dplyr::mutate(dplyr::across(.fns = unlist)) %>%
-      dplyr::filter(.data["nms"] != "year") %>%
+      dplyr::filter(.data[["nms"]] != "year") %>%
       dplyr::mutate(nms = c(
         "WUSM Dept. Rank",
         "WUSM Dept. # Grants",
         "WUSM % To Dept. NIH"
       )) %>%
-      dplyr::rename(" " = .data["nms"]) %>%
+      dplyr::rename(" " = .data[["nms"]]) %>%
       flextable::flextable() %>%
       flextable::fontsize(size = 12) %>%
       flextable::width(1, 2) %>%
@@ -143,10 +143,10 @@ brimr_make_slide <-
 
     gg_d <- d %>%
       dplyr::mutate(
-        gg_wusm_award = round(.data["wusm_award"] / 1e+03, 0),
-        gg_str_wusm_award = scales::dollar_format()(.data["gg_wusm_award"]),
+        gg_wusm_award = round(.data[["wusm_award"]] / 1e+03, 0),
+        gg_str_wusm_award = scales::dollar_format()(.data[["gg_wusm_award"]]),
         gg_wusm_pct =
-          100 * 0.10 * .data["wusm_pct"] * max(.data["gg_wusm_award"])
+          100 * 0.10 * .data[["wusm_pct"]] * max(.data[["gg_wusm_award"]])
       )
 
     gg_d_gg_wusm_award_5k_ceiling <-
@@ -157,14 +157,14 @@ brimr_make_slide <-
     gg <- gg_d %>%
       ggplot2::ggplot(
         ggplot2::aes(
-          .data["year"],
-          .data["gg_wusm_award"],
-          label = .data["gg_str_wusm_award"]
+          .data[["year"]],
+          .data[["gg_wusm_award"]],
+          label = .data[["gg_str_wusm_award"]]
         )
       ) +
       ggplot2::geom_col(color = "black", size = 1.5) +
-      ggplot2::geom_point(ggplot2::aes(year, .data["gg_wusm_pct"]), size = 3) +
-      ggplot2::geom_line(ggplot2::aes(year, .data["gg_wusm_pct"]), size = 1.5) +
+      ggplot2::geom_point(ggplot2::aes(year, .data[["gg_wusm_pct"]]), size = 3) +
+      ggplot2::geom_line(ggplot2::aes(year, .data[["gg_wusm_pct"]]), size = 1.5) +
       ggplot2::geom_text(nudge_y = 2000) +
       ggplot2::scale_x_continuous(
         name = ggplot2::element_blank(),
