@@ -329,6 +329,6 @@ brimr_ranking_table <- function(year) {
       year = year,
       nih_combining_name = josp::brimr_wusm_dept_mappings$nih_combining_name
     ),
-    brimr_ranking_table_row
+    josp:::brimr_ranking_table_row
   )
 }
