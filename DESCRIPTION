@@ -1,0 +1,30 @@
+Package: josp
+Type: Package
+Title: Helpful Functions for the Joint Office of Strategic Planning (JOSP)
+Version: 0.1.0
+Authors@R: 
+    person(given = "Matthew",
+           family = "Schuelke",
+           role = c("aut", "cre"),
+           email = "schuelke@wustl.edu",
+           comment = c(ORCID = "0000-0001-5755-1725"))
+Description: This package provides helpful functions for the Washington 
+    University in Saint Louis School of Medicine Joint Office of Strategic 
+    Planning
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+URL: https://github.com/the-mad-statter/josp
+BugReports: https://github.com/the-mad-statter/josp/issues
+Depends:
+    dplyr,
+    R (>= 2.10)
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.1
+Imports: 
+    httr,
+    janitor,
+    tibble
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
