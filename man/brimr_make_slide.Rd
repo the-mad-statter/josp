@@ -6,14 +6,14 @@
 \usage{
 brimr_make_slide(
   year,
-  dept,
-  target = sprintf("brimr_\%s_\%s.pptx", dept, year)
+  nih_dept_combining_name,
+  target = brimr_slide_name(nih_dept_combining_name, year)
 )
 }
 \arguments{
 \item{year}{desired year}
 
-\item{dept}{desired department}
+\item{nih_dept_combining_name}{desired department}
 
 \item{target}{destination file}
 }

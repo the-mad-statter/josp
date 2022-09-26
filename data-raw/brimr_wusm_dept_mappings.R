@@ -1,5 +1,5 @@
 brimr_wusm_dept_mappings <- dplyr::tribble(
-  ~wusm_dept, ~nih_combining_name,
+  ~wusm_dept, ~nih_dept_combining_name,
   "Emergency Medicine", "EMERGENCY MEDICINE",
   "Internal Medicine", "INTERNAL MEDICINE/MEDICINE",
   "Neurology", "NEUROLOGY",

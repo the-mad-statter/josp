@@ -4,7 +4,7 @@
 \alias{brimr_ranking_table_row}
 \title{BRIMR Ranking Table Row}
 \usage{
-brimr_ranking_table_row(year, nih_combining_name)
+brimr_ranking_table_row(year, nih_dept_combining_name)
 }
 \arguments{
 \item{year}{desired year}

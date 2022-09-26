@@ -4,12 +4,12 @@
 \alias{brimr_get_fig_data}
 \title{BRIMR Get Fig Data}
 \usage{
-brimr_get_fig_data(year, dept)
+brimr_get_fig_data(year, nih_dept_combining_name)
 }
 \arguments{
 \item{year}{desired year}
 
-\item{dept}{desired department}
+\item{nih_dept_combining_name}{desired department}
 }
 \value{
 a tibble containing summary information regarding NIH funding
