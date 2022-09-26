@@ -33,7 +33,7 @@ brimr_download_table_3 <-
     }
   }
 
-#' BRIMR Get Fig Data
+#' BRIMR Department Data
 #'
 #' @param year desired year
 #' @param nih_dept_combining_name desired department
@@ -42,8 +42,8 @@ brimr_download_table_3 <-
 #' @export
 #'
 #' @examples
-#' brimr_get_fig_data(2021, "PEDIATRICS")
-brimr_get_fig_data <- function(year, nih_dept_combining_name) {
+#' brimr_dept_data(2021, "PEDIATRICS")
+brimr_dept_data <- function(year, nih_dept_combining_name) {
   funding_ranked_by_department <- josp::brimr_table_3 %>%
     dplyr::filter(.data[["year"]] == .env[["year"]]) %>%
     dplyr::group_by(
@@ -94,7 +94,7 @@ brimr_get_fig_data <- function(year, nih_dept_combining_name) {
   )
 }
 
-#' BRIMR Get WUSM Department Name
+#' BRIMR Map WUSM Department Name
 #'
 #' @param nih_dept_combining_name standardized NIH department name
 #' @param sanitize replace spaces and ampersands
@@ -103,8 +103,8 @@ brimr_get_fig_data <- function(year, nih_dept_combining_name) {
 #' @export
 #'
 #' @examples
-#' brimr_get_wusm_dept("EMERGENCY MEDICINE")
-brimr_get_wusm_dept <- function(nih_dept_combining_name, sanitize = FALSE) {
+#' brimr_map_wusm_dept("EMERGENCY MEDICINE")
+brimr_map_wusm_dept <- function(nih_dept_combining_name, sanitize = FALSE) {
   wusm_dept <- josp::brimr_wusm_dept_mappings %>%
     dplyr::filter(
       .data[["nih_dept_combining_name"]] ==
@@ -129,23 +129,23 @@ brimr_get_wusm_dept <- function(nih_dept_combining_name, sanitize = FALSE) {
 #' @export
 #'
 #' @examples
-#' brimr_slide_name("PEDIATRICS", 2021)
-brimr_slide_name <- function(nih_dept_combining_name, year) {
+#' brimr_dept_slide_name("PEDIATRICS", 2021)
+brimr_dept_slide_name <- function(nih_dept_combining_name, year) {
   sprintf(
     "BRIMR_%s_%s.pptx",
-    brimr_get_wusm_dept(nih_dept_combining_name, TRUE),
+    brimr_map_wusm_dept(nih_dept_combining_name, TRUE),
     year
   )
 }
 
-#' BRIMR Flextable
+#' BRIMR Department Flextable
 #'
 #' @param data tibble containing years in rows and four variables at a minimum:
 #' year, wusm_rank, wusm_n_awards, wusm_prop_nih_total_funding
 #'
 #' @return a flextable listing rank, number of grants, and percent of NIH
 #' funding for each year
-brimr_flextable <- function(data) {
+brimr_dept_flextable <- function(data) {
   data <- data %>%
     dplyr::select(
       .data[["year"]],
@@ -178,22 +178,22 @@ brimr_flextable <- function(data) {
     flextable::width(2:5, 0.6)
 }
 
-#' BRIMR Make PowerPoint Slide
+#' BRIMR Department Slide
 #'
 #' @param year desired year
 #' @param nih_dept_combining_name desired department
-#' @param target destination file
+#' @param target path to the pptx file to write
 #'
 #' @export
-brimr_make_slide <-
+brimr_dept_slide <-
   function(year,
            nih_dept_combining_name,
-           target = brimr_slide_name(nih_dept_combining_name, year)) {
+           target = brimr_dept_slide_name(nih_dept_combining_name, year)) {
     d <- dplyr::tibble(
       year = as.numeric(year):(as.numeric(year) - 3),
       nih_dept_combining_name = nih_dept_combining_name
     ) %>%
-      purrr::pmap_dfr(brimr_get_fig_data)
+      purrr::pmap_dfr(brimr_dept_data)
 
     wusm_cagr <- scales::percent_format(0.1)(
       cagr(
@@ -213,7 +213,7 @@ brimr_make_slide <-
       sub("^\\d{2}", "", max(d$year))
     )
 
-    ft <- brimr_flextable(d)
+    ft <- brimr_dept_flextable(d)
 
     gg_d <- d %>%
       dplyr::mutate(
@@ -286,7 +286,7 @@ brimr_make_slide <-
       sprintf(
         "%s WUSM %s CAGR: %s",
         year_span,
-        brimr_get_wusm_dept(nih_dept_combining_name),
+        brimr_map_wusm_dept(nih_dept_combining_name),
         wusm_cagr
       ),
       fp_1
@@ -300,7 +300,7 @@ brimr_make_slide <-
       sprintf(
         "%s NIH %s CAGR: %s",
         year_span,
-        brimr_get_wusm_dept(nih_dept_combining_name),
+        brimr_map_wusm_dept(nih_dept_combining_name),
         nih_cagr
       ),
       fp_1
@@ -370,8 +370,8 @@ brimr_make_slide <-
 #' @examples
 #' josp:::brimr_ranking_table_row(2021, "PEDIATRICS")
 brimr_ranking_table_row <- function(year, nih_dept_combining_name) {
-  year_1 <- brimr_get_fig_data(year, nih_dept_combining_name)
-  year_0 <- brimr_get_fig_data(year - 1, nih_dept_combining_name)
+  year_1 <- brimr_dept_data(year, nih_dept_combining_name)
+  year_0 <- brimr_dept_data(year - 1, nih_dept_combining_name)
 
   wusm_dept <- josp::brimr_wusm_dept_mappings %>%
     dplyr::filter(
@@ -383,16 +383,16 @@ brimr_ranking_table_row <- function(year, nih_dept_combining_name) {
     wusm_dept = wusm_dept,
     nih_dept_combining_name = nih_dept_combining_name,
     wusm_rank_status = dplyr::case_when(
-      year_0$wusm_rank < year_1$wusm_rank ~ "up",
+      year_0$wusm_rank < year_1$wusm_rank ~ "down", # down in ranking
       year_0$wusm_rank == year_1$wusm_rank ~ "equal",
-      year_0$wusm_rank > year_1$wusm_rank ~ "down",
+      year_0$wusm_rank > year_1$wusm_rank ~ "up", # up in ranking
       TRUE ~ NA_character_
     ),
     wusm_rank_1 = year_1$wusm_rank,
     wusm_rank_0 = year_0$wusm_rank,
     wusm_funding_1 = year_1$wusm_funding,
     wusm_funding_0 = year_0$wusm_funding,
-    top_organiation_name_1 = year_1$top_organization_name,
+    top_organization_name_1 = year_1$top_organization_name,
     top_organization_funding_1 = year_1$top_organization_funding,
     top_organization_name_0 = year_0$top_organization_name,
     top_organization_funding_0 = year_0$top_organization_funding
@@ -401,7 +401,7 @@ brimr_ranking_table_row <- function(year, nih_dept_combining_name) {
 
 #' BRIMR Ranking Table
 #'
-#' @param year desired year
+#' @param year desired year to be compared to the previous
 #'
 #' @return a tibble containing data that compares WUSM departments ranks and
 #' funding vs the top funded department for the provided and previous year.
@@ -419,3 +419,134 @@ brimr_ranking_table <- function(year) {
     brimr_ranking_table_row
   )
 }
+
+#' BRIMR Ranking Flextable
+#'
+#' @param year desired year to be compared to the previous
+#'
+#' @return a printable flextable version of brimr_ranking_table(year)
+#' @export
+#'
+#' @examples
+#' brimr_ranking_flextable(2021)
+brimr_ranking_flextable <- function(year) {
+  year_0 <- year - 1
+  year_1 <- year
+
+  rt <- brimr_ranking_table(year) %>%
+    dplyr::select(-.data[["nih_dept_combining_name"]]) %>%
+    dplyr::arrange(.data[["wusm_dept"]])
+
+  k <- list(
+    "light_red"    = "#ffcccc",
+    "yellow" = "#fff2cc",
+    "light_green"  = "#e2efda",
+    "light_blue"   = "#d9e1f2",
+    "dark_green" = "#008000",
+    "dark_red" = "#ff0000",
+    "dark_blue" = "#0000ff"
+  )
+
+  rank_status_rows <- list(
+    "down" = which(rt$wusm_rank_status == "down"),
+    "equal" = which(rt$wusm_rank_status == "equal"),
+    "up" = which(rt$wusm_rank_status == "up")
+  )
+
+  rank_2_rows <- which(rt$wusm_rank_1 == 2)
+
+  rt %>%
+    dplyr::mutate(
+      dplyr::across(
+        c(
+          dplyr::matches("wusm_funding_[01]"),
+          dplyr::matches("top_organization_funding_[01]")
+        ),
+        scales::label_dollar()
+      ),
+      wusm_rank_status = dplyr::case_when(
+        wusm_rank_status == "up" ~ "\u2191",
+        wusm_rank_status == "equal" ~ "=",
+        wusm_rank_status == "down" ~ "\u2193",
+        TRUE ~ NA_character_
+      )
+    ) %>%
+    flextable::flextable() %>%
+    flextable::bg(i = rank_status_rows$down, bg = k$light_red) %>%
+    flextable::bg(i = rank_status_rows$equal, bg = k$yellow) %>%
+    flextable::bg(i = rank_status_rows$up, bg = k$light_green) %>%
+    flextable::bg(i = which(rt$wusm_rank_1 == 1), bg = k$light_blue) %>%
+    flextable::color(i = rank_status_rows$down, j = 2, color = k$dark_red) %>%
+    flextable::color(i = rank_status_rows$up, j = 2, color = k$dark_green) %>%
+    flextable::color(i = rank_2_rows, j = 3, color = k$dark_blue) %>%
+    flextable::set_header_labels(
+      wusm_dept = "",
+      wusm_rank_status = paste(
+        sub("^\\d{2}", "", year_1),
+        "vs",
+        sub("^\\d{2}", "", year_0)
+      ),
+      wusm_rank_1 = year_1,
+      wusm_rank_0 = year_0,
+      wusm_funding_1 = year_1,
+      wusm_funding_0 = year_0,
+      top_organization_name_1 = "#1 in Funding",
+      top_organization_funding_1 = "Amount",
+      top_organization_name_0 = "#1 in Funding",
+      top_organization_funding_0 = "Amount"
+    ) %>%
+    flextable::add_header_row(
+      values = c("Department", "Rank", "Funding", year_1, year_0),
+      colwidths = c(1, 3, 2, 2, 2)
+    ) %>%
+    flextable::add_header_row(
+      values = c("WUSM", "NIH"),
+      colwidths = c(6, 4)
+    ) %>%
+    flextable::align(align = "center", part = "all") %>%
+    flextable::align(j = 1, align = "left", part = "body") %>%
+    flextable::fontsize(size = 9, part = "all") %>%
+    flextable::padding(
+      padding.top = 5,
+      padding.bottom = 5,
+      padding.left = 0,
+      padding.right = 0,
+      part = "all"
+    ) %>%
+    flextable::width(j = 1,              width = 1.20) %>% # wusm depts
+    flextable::width(j = 2,              width = 0.60) %>% # wusm rank change
+    flextable::width(j = c(3, 4),        width = 0.50) %>% # wusm ranks
+    flextable::width(j = c(5, 6, 8, 10), width = 1.00) %>% # amounts
+    flextable::width(j = c(7, 9),        width = 3.00)     # org names
+}
+
+#' BRIMR Ranking Slide
+#'
+#' @param year desired year to be compared to the previous
+#' @param target path to the pptx file to write
+#'
+#' @export
+brimr_ranking_slide <-
+  function(year, target = sprintf("BRIMR_Department_Rankings_%s.pptx", year)) {
+    template_16x9 <- system.file("officer/template_16x9.pptx", package = "josp")
+    pptx <- officer::read_pptx(template_16x9)
+
+    pptx <- officer::add_slide(
+      pptx,
+      layout = "Blank",
+      master = "Office Theme"
+    )
+
+    pptx <- officer::ph_with(
+      x = pptx,
+      value = brimr_ranking_flextable(year),
+      location = officer::ph_location(
+        left = 0.25,
+        top = 0.25,
+        width = 15.5,
+        height = 8.5
+      )
+    )
+
+    print(pptx, target = target)
+  }

@@ -7,7 +7,7 @@
 brimr_ranking_table(year)
 }
 \arguments{
-\item{year}{desired year}
+\item{year}{desired year to be compared to the previous}
 }
 \value{
 a tibble containing data that compares WUSM departments ranks and
