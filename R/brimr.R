@@ -363,7 +363,7 @@ brimr_dept_slide <-
 #' BRIMR Ranking Table Row
 #'
 #' @param year desired year
-#' @param nih_combining_name the NIH combining name of the department
+#' @param nih_dept_combining_name the NIH combining name of the department
 #'
 #' @return a tibble containing data for one row in a ranking table
 #'

@@ -9,7 +9,7 @@ brimr_ranking_table_row(year, nih_dept_combining_name)
 \arguments{
 \item{year}{desired year}
 
-\item{nih_combining_name}{the NIH combining name of the department}
+\item{nih_dept_combining_name}{the NIH combining name of the department}
 }
 \value{
 a tibble containing data for one row in a ranking table
