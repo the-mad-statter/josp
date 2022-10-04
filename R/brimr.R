@@ -33,6 +33,32 @@ brimr_download_table_3 <-
     }
   }
 
+#' BRIMR Map WUSM Department Name
+#'
+#' @param nih_dept_combining_name standardized NIH department name
+#' @param sanitize replace spaces and ampersands
+#'
+#' @return the corresponding WUSM department name
+#' @export
+#'
+#' @examples
+#' brimr_map_wusm_dept("EMERGENCY MEDICINE")
+brimr_map_wusm_dept <- function(nih_dept_combining_name, sanitize = FALSE) {
+  wusm_dept <- josp::brimr_wusm_dept_mappings %>%
+    dplyr::filter(
+      .data[["nih_dept_combining_name"]] ==
+        .env[["nih_dept_combining_name"]]
+    ) %>%
+    dplyr::pull(wusm_dept)
+
+  if (sanitize) {
+    wusm_dept <- gsub(" ", "_", wusm_dept)
+    wusm_dept <- gsub("&", "and", wusm_dept)
+  }
+
+  return(wusm_dept)
+}
+
 #' BRIMR Department Data
 #'
 #' @param year desired year
@@ -94,48 +120,39 @@ brimr_dept_data <- function(year, nih_dept_combining_name) {
   )
 }
 
-#' BRIMR Map WUSM Department Name
+#' BRIMR Genetics Data
 #'
-#' @param nih_dept_combining_name standardized NIH department name
-#' @param sanitize replace spaces and ampersands
+#' @param year desired year
 #'
-#' @return the corresponding WUSM department name
+#' @return a 2 x 6 tibble with rows for dept_name either GENETICS or
+#' GENOME INSTITUTE and containing columsn for year, organization_name,
+#' nih_dept_combining_name, dept_name, fisc_year, and wusm_funding.
+#'
 #' @export
 #'
 #' @examples
-#' brimr_map_wusm_dept("EMERGENCY MEDICINE")
-brimr_map_wusm_dept <- function(nih_dept_combining_name, sanitize = FALSE) {
-  wusm_dept <- josp::brimr_wusm_dept_mappings %>%
+#' brimr_genetics_data(2021)
+brimr_genetics_data <- function(year) {
+  josp::brimr_table_3 %>%
     dplyr::filter(
-      .data[["nih_dept_combining_name"]] ==
-        .env[["nih_dept_combining_name"]]
+      .data[["year"]] == .env[["year"]],
+      .data[["organization_name"]] %in% c(
+        "WASHINGTON UNIVERSITY",
+        "WASHINGTON UNIVERSITY ST LOUIS"
+      ),
+      .data[["dept_name"]] %in% c("GENETICS", "GENOME INSTITUTE")
     ) %>%
-    dplyr::pull(wusm_dept)
-
-  if (sanitize) {
-    wusm_dept <- gsub(" ", "_", wusm_dept)
-    wusm_dept <- gsub("&", "and", wusm_dept)
-  }
-
-  return(wusm_dept)
-}
-
-#' BRIMR Slide Name
-#'
-#' @param nih_dept_combining_name department
-#' @param year year
-#'
-#' @return a standardized slide name
-#' @export
-#'
-#' @examples
-#' brimr_dept_slide_name("PEDIATRICS", 2021)
-brimr_dept_slide_name <- function(nih_dept_combining_name, year) {
-  sprintf(
-    "BRIMR_%s_%s.pptx",
-    brimr_map_wusm_dept(nih_dept_combining_name, TRUE),
-    year
-  )
+    dplyr::group_by(
+      .data[["year"]],
+      .data[["organization_name"]],
+      .data[["nih_dept_combining_name"]],
+      .data[["dept_name"]]
+    ) %>%
+    dplyr::summarize(
+      fisc_year = sub("^\\d{2}", "FY", .env[["year"]]),
+      wusm_funding = sum(.data[["funding"]], na.rm = TRUE),
+      .groups = "drop"
+    )
 }
 
 #' BRIMR Department Flextable
@@ -178,6 +195,304 @@ brimr_dept_flextable <- function(data) {
     flextable::width(2:5, 0.6)
 }
 
+#' BRIMR Genetics Flextable
+#'
+#' @param data tibble containing years in rows and three variables at a minimum:
+#' fisc_year, dept_name, wusm_funding. dept_name should contain values of either
+#' GENETICS or GENOME INSTITUTE.
+#'
+#' @return a flextable listing funding totals for each dept_name for each year
+brimr_genetics_flextable <- function(data) {
+  data %>%
+    dplyr::select(
+      .data[["fisc_year"]],
+      .data[["dept_name"]],
+      .data[["wusm_funding"]]
+    ) %>%
+    dplyr::arrange(.data[["fisc_year"]]) %>%
+    tidyr::pivot_wider(
+      names_from = .data[["fisc_year"]],
+      values_from = .data[["wusm_funding"]]
+    ) %>%
+    dplyr::mutate(
+      dept_name = dplyr::case_when(
+        dept_name == "GENETICS" ~ "WUSM NIH Genetics Other Award $",
+        dept_name == "GENOME INSTITUTE" ~ "WUSM NIH Genome Institute Award $",
+        TRUE ~ NA_character_
+      ),
+      dplyr::across(
+        dplyr::starts_with("FY"), ~ scales::label_dollar()(round(. / 1000))
+      )
+    ) %>%
+    dplyr::rename(" " = .data[["dept_name"]]) %>%
+    flextable::flextable() %>%
+    flextable::fontsize(size = 12) %>%
+    flextable::width(1, 2) %>%
+    flextable::width(2:5, 0.6)
+}
+
+#' BRIMR Slide Name
+#'
+#' @param nih_dept_combining_name department
+#' @param year year
+#'
+#' @return a standardized slide name
+#'
+#' @export
+#'
+#' @examples
+#' brimr_dept_slide_name("PEDIATRICS", 2021)
+brimr_dept_slide_name <- function(nih_dept_combining_name, year) {
+  sprintf(
+    "BRIMR_%s_%s.pptx",
+    brimr_map_wusm_dept(nih_dept_combining_name, TRUE),
+    year
+  )
+}
+
+#' BRIMR Department Plot
+#'
+#' @param year desired year
+#' @param nih_dept_combining_name desired department
+#' @param y2_max maximum proportion for second  axis
+#' @param y2_by increment of second axis labels
+#' @param nih_pct_lab_nudge_y vertical adjustment to nudge NIH percent labels by
+#'
+#' @return a ggplot
+#' @export
+#'
+#' @examples
+#' brimr_dept_plot(2021, "PEDIATRICS")
+brimr_dept_plot <-
+  function(year,
+           nih_dept_combining_name,
+           y2_max = 0.10,
+           y2_by = 0.02,
+           nih_pct_lab_nudge_y = 0) {
+    d <- dplyr::tibble(
+      year = as.numeric(year):(as.numeric(year) - 3),
+      nih_dept_combining_name = nih_dept_combining_name
+    ) %>%
+      purrr::pmap_dfr(brimr_dept_data) %>%
+      dplyr::select(
+        .data[["fisc_year"]],
+        .data[["wusm_funding"]],
+        .data[["wusm_prop_nih_total_funding"]],
+        .data[["nih_dept_combining_name"]]
+      ) %>%
+      dplyr::mutate(
+        gg_wusm_funding = .data[["wusm_funding"]] / 1000,
+        gg_col_labs =
+          scales::label_dollar(1, 0.001)(.data[["wusm_funding"]]),
+        gg_nih_pct_labs =
+          scales::label_percent(0.1)(.data[["wusm_prop_nih_total_funding"]])
+      )
+
+    # start plot
+    gg <- d %>%
+      ggplot2::ggplot(
+        ggplot2::aes(
+          .data[["fisc_year"]],
+          .data[["gg_wusm_funding"]]
+        )
+      ) +
+      ggplot2::geom_col(color = "black") +
+      ggplot2::geom_text(
+        ggplot2::aes(
+          .data[["fisc_year"]],
+          .data[["gg_wusm_funding"]],
+          label = .data[["gg_col_labs"]]
+        ),
+        vjust = -0.5
+      )
+
+    # calculate max y
+    y_max <- ggplot2::ggplot_build(gg)$layout$panel_params[[1]]$y.range[2]
+
+    # calculate max y2 from start plot
+    gg$data <- gg$data %>%
+      dplyr::mutate(
+        gg_nih_pct = 1 / .env[["y2_max"]] *
+          .data[["wusm_prop_nih_total_funding"]] * .env[["y_max"]]
+      )
+
+    # finish plot
+    y2_breaks <- seq(0, y2_max, y2_by)
+
+    gg +
+      ggplot2::geom_point(
+        ggplot2::aes(
+          .data[["fisc_year"]],
+          .data[["gg_nih_pct"]]
+        )
+      ) +
+      ggplot2::geom_line(
+        ggplot2::aes(
+          .data[["fisc_year"]],
+          .data[["gg_nih_pct"]],
+          group = .data[["nih_dept_combining_name"]]
+        )
+      ) +
+      ggplot2::geom_text(
+        ggplot2::aes(
+          .data[["fisc_year"]],
+          .data[["gg_nih_pct"]],
+          label = .data[["gg_nih_pct_labs"]]
+        ),
+        vjust = -0.5,
+        nudge_y = nih_pct_lab_nudge_y
+      ) +
+      ggplot2::scale_y_continuous(
+        name = "WUSM NIH Dept. Award $",
+        limits = c(0, y_max),
+        labels = scales::label_dollar(),
+        sec.axis = ggplot2::sec_axis(
+          ~ y2_max * . / y_max,
+          name = "WUSM % to NIH Dept. Total",
+          breaks = y2_breaks,
+          labels = scales::percent_format(0.1)(y2_breaks)
+        )
+      ) +
+      ggplot2::scale_x_discrete(name = ggplot2::element_blank()) +
+      ggplot2::scale_fill_manual(
+        name = ggplot2::element_blank(),
+        values = c("white", "grey")
+      ) +
+      ggplot2::guides(
+        fill = ggplot2::guide_legend(override.aes = list(shape = NA))
+      ) +
+      ggplot2::theme(legend.position = "top")
+  }
+
+#' BRIMR Genetics Plot
+#'
+#' @param year desired year
+#' @param y2_max maximum proportion for second  axis
+#' @param y2_by increment of second axis labels
+#' @param nih_pct_lab_nudge_y vertical adjustment to nudge NIH percent labels by
+#'
+#' @return a ggplot
+#' @export
+#'
+#' @examples
+#' brimr_genetics_plot(2021)
+brimr_genetics_plot <-
+  function(year, y2_max = 0.25, y2_by = 0.05, nih_pct_lab_nudge_y = 0) {
+    years <- as.numeric(year):(as.numeric(year) - 3)
+
+    d <- dplyr::left_join(
+      dplyr::tibble(year = years) %>%
+        purrr::pmap_dfr(brimr_genetics_data) %>%
+        dplyr::select(
+          .data[["fisc_year"]],
+          .data[["dept_name"]],
+          .data[["wusm_funding"]]
+        ),
+      dplyr::tibble(
+        year = years,
+        nih_dept_combining_name = "GENETICS"
+      ) %>%
+        purrr::pmap_dfr(brimr_dept_data) %>%
+        dplyr::select(
+          .data[["fisc_year"]],
+          .data[["wusm_funding"]],
+          .data[["wusm_prop_nih_total_funding"]]
+        ) %>%
+        dplyr::rename(wusm_total_funding = .data[["wusm_funding"]]),
+      by = "fisc_year"
+    ) %>%
+      dplyr::mutate(
+        wusm_dept_pct = .data[["wusm_funding"]] / .data[["wusm_total_funding"]],
+        gg_dept_funding = .data[["wusm_funding"]] / 1000,
+        gg_total_funding = .data[["wusm_total_funding"]] / 1000,
+        gg_col_labs =
+          scales::label_dollar(1, 0.001)(.data[["wusm_total_funding"]]),
+        gg_dept_pct_labs = scales::label_percent(0.1)(.data[["wusm_dept_pct"]]),
+        gg_nih_pct_labs =
+          scales::label_percent(0.1)(.data[["wusm_prop_nih_total_funding"]])
+      )
+
+    # start plot
+    gg <- d %>%
+      ggplot2::ggplot(
+        ggplot2::aes(
+          .data[["fisc_year"]],
+          .data[["gg_dept_funding"]],
+          fill = .data[["dept_name"]]
+        )
+      ) +
+      ggplot2::geom_col(color = "black") +
+      ggplot2::geom_text(
+        ggplot2::aes(label = .data[["gg_dept_pct_labs"]]),
+        position = ggplot2::position_stack(0.5)
+      ) +
+      ggplot2::geom_text(
+        ggplot2::aes(
+          .data[["fisc_year"]],
+          .data[["gg_total_funding"]],
+          label = .data[["gg_col_labs"]]
+        ),
+        vjust = -0.5
+      )
+
+    # calculate max y
+    y_max <- ggplot2::ggplot_build(gg)$layout$panel_params[[1]]$y.range[2]
+
+    # calculate max y2 from start plot
+    gg$data <- gg$data %>%
+      dplyr::mutate(
+        gg_nih_pct = 1 / .env[["y2_max"]] *
+          .data[["wusm_prop_nih_total_funding"]] * .env[["y_max"]]
+      )
+
+    # finish plot
+    y2_breaks <- seq(0, y2_max, y2_by)
+
+    gg +
+      ggplot2::geom_point(
+        ggplot2::aes(
+          .data[["fisc_year"]],
+          .data[["gg_nih_pct"]]
+        )
+      ) +
+      ggplot2::geom_line(
+        ggplot2::aes(
+          .data[["fisc_year"]],
+          .data[["gg_nih_pct"]],
+          group = .data[["dept_name"]]
+        )
+      ) +
+      ggplot2::geom_text(
+        ggplot2::aes(
+          .data[["fisc_year"]],
+          .data[["gg_nih_pct"]],
+          label = .data[["gg_nih_pct_labs"]]
+        ),
+        vjust = -0.5,
+        nudge_y = nih_pct_lab_nudge_y
+      ) +
+      ggplot2::scale_y_continuous(
+        name = "WUSM NIH Genetics Award $",
+        limits = c(0, y_max),
+        labels = scales::label_dollar(),
+        sec.axis = ggplot2::sec_axis(
+          ~ y2_max * . / y_max,
+          name = "WUSM % to NIH Genetics Total",
+          breaks = y2_breaks,
+          labels = scales::percent_format(0.1)(y2_breaks)
+        )
+      ) +
+      ggplot2::scale_x_discrete(name = ggplot2::element_blank()) +
+      ggplot2::scale_fill_manual(
+        name = ggplot2::element_blank(),
+        values = c("white", "grey")
+      ) +
+      ggplot2::guides(
+        fill = ggplot2::guide_legend(override.aes = list(shape = NA))
+      ) +
+      ggplot2::theme(legend.position = "top")
+  }
+
 #' BRIMR Department Slide
 #'
 #' @param year desired year
@@ -215,55 +530,7 @@ brimr_dept_slide <-
 
     ft <- brimr_dept_flextable(d)
 
-    gg_d <- d %>%
-      dplyr::mutate(
-        gg_wusm_funding = round(.data[["wusm_funding"]] / 1e+03, 0),
-        gg_wusm_funding_str = scales::dollar_format()(
-          .data[["gg_wusm_funding"]]
-        ),
-        gg_wusm_prop_nih_total_funding =
-          100 * .data[["wusm_prop_nih_total_funding"]] *
-            0.10 * max(.data[["gg_wusm_funding"]])
-      )
-
-    gg <- gg_d %>%
-      ggplot2::ggplot(
-        ggplot2::aes(
-          .data[["year"]],
-          .data[["gg_wusm_funding"]],
-          label = .data[["gg_wusm_funding_str"]]
-        )
-      ) +
-      ggplot2::geom_col(color = "black", size = 1.5) +
-      ggplot2::geom_point(
-        ggplot2::aes(year, .data[["gg_wusm_prop_nih_total_funding"]]),
-        size = 3
-      ) +
-      ggplot2::geom_line(
-        ggplot2::aes(year, .data[["gg_wusm_prop_nih_total_funding"]]),
-        size = 1.5
-      ) +
-      ggplot2::geom_text(nudge_y = 2000) +
-      ggplot2::scale_x_continuous(
-        name = ggplot2::element_blank(),
-        breaks = d$year,
-        labels = d$fisc_year
-      )
-
-    y_max <- ggplot2::ggplot_build(gg)$layout$panel_params[[1]]$y.range[2]
-
-    gg <- gg +
-      ggplot2::scale_y_continuous(
-        name = "WUSM NIH Dept. Award $",
-        limits = c(0, y_max),
-        labels = scales::label_dollar(),
-        sec.axis = ggplot2::sec_axis(
-          ~ 100 * 0.10 * . / y_max,
-          name = "WUSM % to NIH Dept. Total",
-          breaks = seq(0, 10, 2),
-          labels = scales::percent_format(0.1)(seq(0, 0.1, 0.02))
-        )
-      )
+    gg <- brimr_dept_plot(year, nih_dept_combining_name)
 
     pptx <- officer::read_pptx()
 
@@ -281,7 +548,7 @@ brimr_dept_slide <-
     )
 
     # cagr
-    fp_1 <- officer::fp_text(font.size = 14)
+    fp_1 <- officer::fp_text(font.size = 12)
     bl_1 <- officer::block_list(officer::fpar(officer::ftext(
       sprintf(
         "%s WUSM %s CAGR: %s",
@@ -316,6 +583,158 @@ brimr_dept_slide <-
       x = pptx,
       value = ft,
       location = officer::ph_location(0.5, 3.75)
+    )
+
+    # footnote
+    fp_2 <- officer::fp_text(font.size = 8)
+    bl_3 <- officer::block_list(officer::fpar(officer::ftext(paste0(
+      "NIH Funding = federal fiscal years (October 1 = September 30); ",
+      "includes both direct and indirect awards; includes research grants, ",
+      "training grants and fellowships. Excludes R&D Contracts and ARRA ",
+      "funding."
+    ), fp_2)))
+    pptx <- officer::ph_with(
+      x = pptx,
+      value = bl_3,
+      location = officer::ph_location(
+        left = 0.5,
+        top = 6.75,
+        width = 9,
+        height = 0.5
+      )
+    )
+    bl_4 <- officer::block_list(officer::fpar(officer::ftext(
+      "Source: Blue Ridge Institute for Medial Research website", fp_2
+    )))
+    pptx <- officer::ph_with(
+      x = pptx,
+      value = bl_4,
+      location = officer::ph_location(
+        left = 0.5,
+        top = 7,
+        width = 9,
+        height = 0.5
+      )
+    )
+
+    # ggplot
+    pptx <- officer::ph_with(
+      x = pptx,
+      value = gg,
+      location = officer::ph_location_right()
+    )
+
+    print(pptx, target = target)
+  }
+
+#' BRIMR Genetics Slide
+#'
+#' @param year desired year
+#' @param target path to the pptx file to write
+#'
+#' @export
+brimr_genetics_slide <-
+  function(year,
+           target = brimr_dept_slide_name("GENETICS", year)) {
+    years <- as.numeric(year):(as.numeric(year) - 3)
+    nih_dept_combining_name <- "GENETICS"
+
+    d_dept <- dplyr::tibble(
+      year = years,
+      nih_dept_combining_name = nih_dept_combining_name
+    ) %>%
+      purrr::pmap_dfr(brimr_dept_data)
+
+    d_genetics <- dplyr::tibble(
+      year = years
+    ) %>%
+      purrr::pmap_dfr(brimr_genetics_data)
+
+    wusm_cagr <- scales::percent_format(0.1)(
+      cagr(
+        dplyr::last(d_dept$wusm_funding),
+        dplyr::first(d_dept$wusm_funding),
+        3
+      )
+    )
+
+    nih_cagr <- scales::percent_format(0.1)(
+      cagr(
+        dplyr::last(d_dept$nih_total_funding),
+        dplyr::first(d_dept$nih_total_funding),
+        3
+      )
+    )
+
+    year_span <- sprintf(
+      "%s-%s",
+      sub("^\\d{2}", "", min(d_dept$year)),
+      sub("^\\d{2}", "", max(d_dept$year))
+    )
+
+    ft_genetics <- brimr_genetics_flextable(d_genetics)
+    ft_dept <- brimr_dept_flextable(d_dept)
+
+    gg <- brimr_genetics_plot(year)
+
+    pptx <- officer::read_pptx()
+
+    pptx <- officer::add_slide(
+      pptx,
+      layout = "Two Content",
+      master = "Office Theme"
+    )
+
+    # title
+    pptx <- officer::ph_with(
+      x = pptx,
+      value = "NIH WUSM Extramural Funding",
+      location = officer::ph_location_type(type = "title")
+    )
+
+    # cagr
+    fp_1 <- officer::fp_text(font.size = 12)
+    bl_1 <- officer::block_list(officer::fpar(officer::ftext(
+      sprintf(
+        "%s WUSM %s CAGR: %s",
+        year_span,
+        brimr_map_wusm_dept(nih_dept_combining_name),
+        wusm_cagr
+      ),
+      fp_1
+    )))
+    pptx <- officer::ph_with(
+      x = pptx,
+      value = bl_1,
+      location = officer::ph_location(0.5, 0.5)
+    )
+    bl_2 <- officer::block_list(officer::fpar(officer::ftext(
+      sprintf(
+        "%s NIH %s CAGR: %s",
+        year_span,
+        brimr_map_wusm_dept(nih_dept_combining_name),
+        nih_cagr
+      ),
+      fp_1
+    )))
+    pptx <- officer::ph_with(
+      x = pptx,
+      value = bl_2,
+      location = officer::ph_location(0.5, 1)
+    )
+
+    # genetics table
+    pptx <- officer::ph_with(
+      x = pptx,
+      value = ft_genetics,
+      location = officer::ph_location(0.5, 3)
+    )
+
+    # dept table
+    pptx <- officer::ph_with(
+      x = pptx,
+      value = ft_dept,
+      location = officer::ph_location(0.5, 5)
     )
 
     # footnote
@@ -438,10 +857,10 @@ brimr_ranking_flextable <- function(year) {
     dplyr::arrange(.data[["wusm_dept"]])
 
   k <- list(
-    "light_red"    = "#ffcccc",
+    "light_red" = "#ffcccc",
     "yellow" = "#fff2cc",
-    "light_green"  = "#e2efda",
-    "light_blue"   = "#d9e1f2",
+    "light_green" = "#e2efda",
+    "light_blue" = "#d9e1f2",
     "dark_green" = "#008000",
     "dark_red" = "#ff0000",
     "dark_blue" = "#0000ff"
@@ -513,11 +932,11 @@ brimr_ranking_flextable <- function(year) {
       padding.right = 0,
       part = "all"
     ) %>%
-    flextable::width(j = 1,              width = 1.20) %>% # wusm depts
-    flextable::width(j = 2,              width = 0.60) %>% # wusm rank change
-    flextable::width(j = c(3, 4),        width = 0.50) %>% # wusm ranks
+    flextable::width(j = 1, width = 1.20) %>% # wusm depts
+    flextable::width(j = 2, width = 0.60) %>% # wusm rank change
+    flextable::width(j = c(3, 4), width = 0.50) %>% # wusm ranks
     flextable::width(j = c(5, 6, 8, 10), width = 1.00) %>% # amounts
-    flextable::width(j = c(7, 9),        width = 3.00)     # org names
+    flextable::width(j = c(7, 9), width = 3.00) # org names
 }
 
 #' BRIMR Ranking Slide
