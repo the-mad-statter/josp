@@ -947,8 +947,7 @@ brimr_ranking_flextable <- function(year) {
 #' @export
 brimr_ranking_slide <-
   function(year, target = sprintf("BRIMR_Department_Rankings_%s.pptx", year)) {
-    template_16x9 <- system.file("officer/template_16x9.pptx", package = "josp")
-    pptx <- officer::read_pptx(template_16x9)
+    pptx <- officer::read_pptx(resource("officer", "template_16x9.pptx"))
 
     pptx <- officer::add_slide(
       pptx,
